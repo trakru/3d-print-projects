@@ -1,5 +1,9 @@
 # Patio AC Venting Connector
 
+| Connector | Flange |
+|---|---|
+| ![Connector](./connector.png) | ![Flange](./flange.png) |
+
 A 3D-printed system for venting a portable AC unit through an exterior patio
 wall to an existing wall-mounted vent hood. The interior end has a snap-on
 connection for the AC duct; the exterior end friction-fits into the vent hood

@@ -8,6 +8,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -34,6 +37,31 @@ jobs:
           done
           echo "--- Built files ---"
           find dist -name "*.stl" -exec ls -lh {} \;
+
+      - name: Render preview PNGs
+        run: |
+          find src -type f -name '*.scad' | while read scad_file; do
+            png_path="${scad_file%.scad}.png"
+            echo "Rendering $png_path"
+            xvfb-run --auto-servernum openscad \
+              --imgsize=1200,900 \
+              --colorscheme=Tomorrow \
+              -o "$png_path" \
+              "$scad_file"
+          done
+
+      - name: Commit updated previews
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add 'src/**/*.png' || true
+          if git diff --staged --quiet; then
+            echo "No preview changes"
+          else
+            git commit -m "ci: update preview renders [skip ci]"
+            git push
+          fi
 
       - name: Upload STL artifacts
         uses: actions/upload-artifact@v4

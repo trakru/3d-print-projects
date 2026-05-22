@@ -1,0 +1,8 @@
+.claude/*
+CLAUDE.md
+
+dist/
+*.stl
+*.bak
+*.swp
+.DS_Store
