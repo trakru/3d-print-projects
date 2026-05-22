@@ -1,0 +1,50 @@
+name: Build STL files
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OpenSCAD
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openscad xvfb
+
+      - name: Build all STL files
+        run: |
+          mkdir -p dist
+          find src -type f -name '*.scad' | while read scad_file; do
+            rel_path="${scad_file#src/}"
+            stl_path="dist/${rel_path%.scad}.stl"
+            mkdir -p "$(dirname "$stl_path")"
+            echo "Building $stl_path"
+            xvfb-run --auto-servernum openscad \
+              -o "$stl_path" \
+              --hardwarnings \
+              "$scad_file"
+          done
+          echo "--- Built files ---"
+          find dist -name "*.stl" -exec ls -lh {} \;
+
+      - name: Upload STL artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: stl-files-${{ github.sha }}
+          path: dist/
+          retention-days: 90
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/**/*.stl
+          generate_release_notes: true
