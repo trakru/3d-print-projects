@@ -24,8 +24,6 @@ sleeve_height    = 40;        // through wall depth on this side + grip on conne
 
 // ---- Screws into OSB ----
 screw_hole_dia   = 4.5;       // #8 wood screw clearance
-screw_csk_dia    = 9;
-screw_csk_depth  = 2.5;
 
 // ---- Detail ----
 chamfer          = 1;
@@ -90,15 +88,11 @@ module spacer_flange() {
                 cylinder(h = chamfer, d1 = sleeve_od, d2 = sleeve_od - 2*chamfer);
             }
         
-        // screw holes with countersinks (countersinks open upward = sleeve side)
+        // simple through-holes for #8 screws
         for (angle = [0, 90, 180, 270]) {
-            rotate([0, 0, angle]) translate([ear_distance, 0, 0]) {
+            rotate([0, 0, angle]) translate([ear_distance, 0, 0])
                 translate([0, 0, -0.1])
                     cylinder(h = plate_thickness + 0.2, d = screw_hole_dia);
-                translate([0, 0, plate_thickness - screw_csk_depth])
-                    cylinder(h = screw_csk_depth + 0.1,
-                             d1 = screw_hole_dia, d2 = screw_csk_dia);
-            }
         }
     }
 }
