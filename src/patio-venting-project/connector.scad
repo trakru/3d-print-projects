@@ -3,7 +3,7 @@
 // Top (narrow OD with lip) is interior side, AC duct snaps on here.
 
 // ---- Measure and set these ----
-wall_depth           = 165;    // 6.5" = 165mm; reduce if your wall is thinner
+wall_depth           = 105;    // 6.5" = 165mm; reduce if your wall is thinner
 exterior_protrusion  = 30;     // length sticking out past exterior wall, into vent hood collar
                                // (set this to the hood collar's depth)
 
