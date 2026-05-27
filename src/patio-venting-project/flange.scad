@@ -1,64 +1,106 @@
-// ===== Wall flange =====
-// Sits flat against the OSB inside the siding cutout. Screws into OSB.
-// Connector slides through the bore.
+// ===== Spacer-flange combo =====
+// Sleeve fills the wall-hole gap AND grips the connector.
+// Plate + ears mount to OSB with screws.
 
-// ---- Cutout & wall ----
-cutout_size      = 205;     // your actual square cutout — measure and update
-flange_clearance = 5;       // gap from cutout edge (forgives slightly imperfect cuts)
+// ---- Wall hole ----
+hole_diameter    = 152.4;     // 6" hole saw
+hole_clearance   = 1;         // radial clearance per side in the hole
 
 // ---- Connector ----
 connector_od     = 145;
-slip_clearance   = 0.5;     // 0.5 = slip; 0.2 = press; 0 = forced
+slip_clearance   = 0.5;       // sleeve ID vs connector OD
 
-// ---- Plate ----
-flange_thickness = 5;
-corner_radius    = 8;
+// ---- Plate body ----
+plate_thickness  = 5;
+main_dia         = 175;       // central disc — covers hole + screw retention zone
+
+// ---- Screw ears ----
+ear_dia          = 24;
+ear_distance     = 90;        // bolt circle radius (180mm BCD)
+
+// ---- Sleeve (spacer body) ----
+sleeve_height    = 40;        // through wall depth on this side + grip on connector
+                              // increase if your wall is asymmetric
 
 // ---- Screws into OSB ----
-screw_hole_dia   = 4.5;     // #8 wood screw clearance
+screw_hole_dia   = 4.5;       // #8 wood screw clearance
 screw_csk_dia    = 9;
 screw_csk_depth  = 2.5;
-screw_inset      = 18;      // from corner
+
+// ---- Detail ----
+chamfer          = 1;
 
 $fn = 360;
 
-flange_size = cutout_size - 2 * flange_clearance;
-bore_id     = connector_od + slip_clearance;
+// --- Derived ---
+sleeve_od        = hole_diameter - 2 * hole_clearance;   // 150.4
+sleeve_id        = connector_od + 2 * slip_clearance;    // 146
+sleeve_wall      = (sleeve_od - sleeve_id) / 2;
+total_height     = plate_thickness + sleeve_height;
+total_od         = 2 * (ear_distance + ear_dia/2);
 
-module rounded_square(size, r) {
-    hull() for (x = [-1, 1], y = [-1, 1])
-        translate([x * (size/2 - r), y * (size/2 - r)]) circle(r = r);
-}
+echo("Sleeve OD (into hole):", sleeve_od);
+echo("Sleeve ID (over connector):", sleeve_id);
+echo("Sleeve wall thickness:", sleeve_wall);
+echo("Total flange OD (across ears):", total_od);
+echo("Bolt circle diameter:", 2 * ear_distance);
+echo("Total height:", total_height);
 
-module flange() {
-    difference() {
-        linear_extrude(flange_thickness)
-            rounded_square(flange_size, corner_radius);
-        
-        // bore
-        translate([0, 0, -0.1])
-            cylinder(h = flange_thickness + 0.2, d = bore_id);
-        
-        // bore chamfers (both faces — easier connector insertion)
-        translate([0, 0, -0.01])
-            cylinder(h = 0.6, d1 = bore_id + 1.2, d2 = bore_id);
-        translate([0, 0, flange_thickness - 0.59])
-            cylinder(h = 0.6, d1 = bore_id, d2 = bore_id + 1.2);
-        
-        // 4 corner screw holes with countersinks (countersinks open toward bed = visible face)
-        positions = [
-            [ flange_size/2 - screw_inset,  flange_size/2 - screw_inset],
-            [-flange_size/2 + screw_inset,  flange_size/2 - screw_inset],
-            [ flange_size/2 - screw_inset, -flange_size/2 + screw_inset],
-            [-flange_size/2 + screw_inset, -flange_size/2 + screw_inset]
-        ];
-        for (pos = positions) {
-            translate([pos[0], pos[1], -0.1])
-                cylinder(h = flange_thickness + 0.2, d = screw_hole_dia);
-            translate([pos[0], pos[1], -0.01])
-                cylinder(h = screw_csk_depth, d1 = screw_csk_dia, d2 = screw_hole_dia);
+module flange_shape() {
+    union() {
+        circle(d = main_dia);
+        for (angle = [0, 90, 180, 270]) {
+            rotate([0, 0, angle])
+                hull() {
+                    circle(d = ear_dia * 0.6);
+                    translate([ear_distance, 0])
+                        circle(d = ear_dia);
+                }
         }
     }
 }
 
-flange();
+module spacer_flange() {
+    difference() {
+        union() {
+            // plate with ears (flat face on bed)
+            linear_extrude(plate_thickness)
+                flange_shape();
+            // sleeve going into the wall hole — fills the radial gap
+            translate([0, 0, plate_thickness])
+                cylinder(h = sleeve_height, d = sleeve_od);
+        }
+        
+        // bore through plate and sleeve
+        translate([0, 0, -0.1])
+            cylinder(h = total_height + 0.2, d = sleeve_id);
+        
+        // chamfer bottom of bore (plate-side, connector entry)
+        translate([0, 0, -0.01])
+            cylinder(h = chamfer, d1 = sleeve_id + 2*chamfer, d2 = sleeve_id);
+        
+        // chamfer top of bore (sleeve-side)
+        translate([0, 0, total_height - chamfer + 0.01])
+            cylinder(h = chamfer, d1 = sleeve_id, d2 = sleeve_id + 2*chamfer);
+        
+        // chamfer top OD of sleeve (lead-in into the wall hole)
+        translate([0, 0, total_height - chamfer + 0.01])
+            difference() {
+                cylinder(h = chamfer, d = sleeve_od + 2*chamfer);
+                cylinder(h = chamfer, d1 = sleeve_od, d2 = sleeve_od - 2*chamfer);
+            }
+        
+        // screw holes with countersinks (countersinks open upward = sleeve side)
+        for (angle = [0, 90, 180, 270]) {
+            rotate([0, 0, angle]) translate([ear_distance, 0, 0]) {
+                translate([0, 0, -0.1])
+                    cylinder(h = plate_thickness + 0.2, d = screw_hole_dia);
+                translate([0, 0, plate_thickness - screw_csk_depth])
+                    cylinder(h = screw_csk_depth + 0.1,
+                             d1 = screw_hole_dia, d2 = screw_csk_dia);
+            }
+        }
+    }
+}
+
+spacer_flange();
